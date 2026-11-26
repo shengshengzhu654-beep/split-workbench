@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>劈叉练习工作台</title>
+<style>
+:root{--bg:#fbf3f5;--card:#fff;--ink:#4a3a4f;--soft:#8c7a92;--pink:#e58aa5;--pink2:#fbdde6;--mint:#8fcbb5;--mint2:#e0f3ec;--line:#f0e1e7}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 "PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:28px;margin:8px 0 16px}
+h2{font-size:22px;margin:0 0 12px}
+section{background:var(--card);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(190,140,160,.12)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;border-radius:14px;padding:10px 16px;background:var(--pink2)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{min-width:64px}
+.chip.on{background:var(--pink);color:#fff}
+.big{display:block;width:100%;font-size:30px;font-weight:700;padding:28px 12px;background:var(--pink);color:#fff;border-radius:24px}
+.sec{font-size:72px;font-weight:700;text-align:center;line-height:1.1;margin:8px 0;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row button{flex:1}
+.bar{height:18px;background:var(--line);border-radius:9px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--pink);border-radius:9px;transition:width .4s}
+.bar.ok i{background:var(--mint)}
+.ok-tag{background:var(--mint2);border-radius:12px;padding:8px 12px;display:inline-block;margin-top:4px}
+.praise{background:var(--pink2);border-radius:16px;padding:14px 16px;margin:12px 0 0}
+.muted{color:var(--soft);font-size:15px}
+input,select{font:inherit;color:inherit;border:2px solid var(--line);border-radius:12px;padding:8px 10px;width:100%;background:#fff}
+label{display:block;flex:1;min-width:110px;font-size:15px;color:var(--soft)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal b{font-weight:400;font-size:14px;color:var(--soft)}
+.d{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;line-height:1.15}
+.d small{font-size:11px}
+.d.has{background:var(--pink2)}
+.d.full{background:var(--mint);color:#fff}
+.d.today{outline:2px solid var(--ink)}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.streak{font-size:20px;margin:10px 0 0}
+svg{width:100%;height:auto;display:block}
+#run{display:none}
+.hide{display:none!important}
+.hist{margin:8px 0 0;padding:0;list-style:none;font-size:16px}
+.hist li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.hist button{padding:2px 10px;font-size:14px;background:var(--line)}
+</style>
+</head>
+<body>
+<main>
+<h1>劈叉练习工作台</h1>
+
+<section id="start">
+  <div class="chips" id="types"></div>
+  <div class="muted">单次时长（分钟）</div>
+  <div class="chips" id="durs"></div>
+  <button class="big" id="go">开始劈叉练习</button>
+</section>
+
+<section id="run">
+  <div class="muted" id="runType" style="text-align:center"></div>
+  <div class="sec" id="clock">03:00</div>
+  <div class="bar"><i id="runBar" style="width:0"></i></div>
+  <div class="row">
+    <button id="pause">暂停</button>
+    <button id="stop">提前结束</button>
+  </div>
+</section>
+
+<section id="today">
+  <h2>今日累计</h2>
+  <div style="font-size:40px;font-weight:700"><span id="tMin">0</span> <span style="font-size:20px;font-weight:400">/ <span id="goalShow">15</span> 分钟</span></div>
+  <div class="bar" id="tBar"><i style="width:0"></i></div>
+  <div id="tOk" class="ok-tag hide">打卡成功，今天的目标完成了</div>
+  <div class="praise hide" id="praise"></div>
+  <div class="row" style="margin-top:12px">
+    <label>每日目标（分钟）<input id="goal" type="number" min="1" max="120" inputmode="numeric"></label>
+  </div>
+  <ul class="hist" id="hist"></ul>
+</section>
+
+<section>
+  <div class="head">
+    <button id="prev" aria-label="上个月">‹</button>
+    <h2 id="mTitle" style="margin:0"></h2>
+    <button id="next" aria-label="下个月">›</button>
+  </div>
+  <div class="cal" id="cal"></div>
+  <div class="streak" id="streak"></div>
+  <div class="muted">粉色：练了；绿色：达到当日目标</div>
+</section>
+
+<section>
+  <h2>柔韧进度</h2>
+  <div class="muted">填离地面的距离（厘米），数字越小说明越接近劈到底。</div>
+  <div class="row" style="margin-top:10px">
+    <label>日期<input id="aDate" type="date"></label>
+    <label>类型<select id="aType"><option>横叉</option><option>竖叉</option></select></label>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <label>左腿（厘米）<input id="aL" type="number" min="0" step="0.5" inputmode="decimal"></label>
+    <label>右腿（厘米）<input id="aR" type="number" min="0" step="0.5" inputmode="decimal"></label>
+  </div>
+  <div class="row" style="margin-top:10px"><button id="aSave">保存这次测量</button></div>
+  <div id="aNote" class="praise hide"></div>
+  <div class="muted" style="margin-top:14px">已完成距离（相比第一次测量）</div>
+  <div class="bar" id="pBar"><i style="width:0"></i></div>
+  <div id="pTxt" class="muted"></div>
+  <div class="row" style="margin-top:6px">
+    <button id="vH" class="chip on">横叉</button>
+    <button id="vV" class="chip">竖叉</button>
+  </div>
+  <div id="chart"></div>
+  <div id="wk" style="margin-top:6px"></div>
+</section>
+
+<p class="muted">数据只保存在这台电脑的这个浏览器里，不会上传。换浏览器或清除浏览数据会丢失。</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEY='splitWorkbench.v1';
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=Object.assign({sessions:[],angles:[],goal:15,dur:3,type:'横叉'},S||{});
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const pad=n=>String(n).padStart(2,'0');
+const ds=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayS=()=>ds(new Date());
+const addDays=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return ds(d)};
+const mins=sec=>Math.round(sec/6)/10; // one decimal
+const fmt=m=>Number.isInteger(m)?m:m.toFixed(1);
+const dayMap=()=>{const m={};S.sessions.forEach(x=>m[x.date]=(m[x.date]||0)+x.sec);return m};
+const dayMin=(m,d)=>(m[d]||0)/60;
+
+/* ---------- 选择 ---------- */
+function renderChoices(){
+  $('types').innerHTML='';
+  ['横叉','竖叉'].forEach(t=>{const b=document.createElement('button');b.textContent=t;b.className='chip'+(S.type===t?' on':'');b.onclick=()=>{S.type=t;save();renderChoices()};$('types').appendChild(b)});
+  $('durs').innerHTML='';
+  [1,3,5,10].forEach(n=>{const b=document.createElement('button');b.textContent=n+' 分钟';b.className='chip'+(S.dur===n?' on':'');b.onclick=()=>{S.dur=n;save();renderChoices()};$('durs').appendChild(b)});
+}
+
+/* ---------- 计时 ---------- */
+let timer=null,endAt=0,remain=0,total=0,paused=false,ctx=null;
+function beep(){
+  try{
+    ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();
+    [660,880,1100].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+i*0.28;
+      o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.3,t+0.03);g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);
+      o.start(t);o.stop(t+0.26);
+    });
+  }catch(e){}
+}
+function showClock(ms){
+  const s=Math.max(0,Math.ceil(ms/1000));
+  $('clock').textContent=pad(Math.floor(s/60))+':'+pad(s%60);
+  $('runBar').style.width=(100*(1-ms/(total*1000)))+'%';
+}
+function tick(){
+  const left=endAt-Date.now();
+  showClock(left);
+  if(left<=0){clearInterval(timer);finish(total,true)}
+}
+$('go').onclick=()=>{
+  try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();ctx.resume()}catch(e){}
+  total=S.dur*60;remain=total*1000;paused=false;
+  $('pause').textContent='暂停';
+  $('runType').textContent='正在练：'+S.type;
+  $('start').classList.add('hide');$('run').style.display='block';
+  endAt=Date.now()+remain;showClock(remain);
+  timer=setInterval(tick,250);
+};
+$('pause').onclick=()=>{
+  if(!paused){paused=true;remain=endAt-Date.now();clearInterval(timer);$('pause').textContent='继续'}
+  else{paused=false;endAt=Date.now()+remain;timer=setInterval(tick,250);$('pause').textContent='暂停'}
+};
+$('stop').onclick=()=>{
+  const left=paused?remain:endAt-Date.now();
+  clearInterval(timer);
+  const done=Math.round(total-left/1000);
+  $('run').style.display='none';$('start').classList.remove('hide');
+  if(done>=30&&confirm('已经练了 '+fmt(mins(done))+' 分钟，要记下来吗？'))finish(done,false);
+};
+function finish(sec,full){
+  $('run').style.display='none';$('start').classList.remove('hide');
+  const before=dayMap();
+  const y=addDays(todayS(),-1);
+  const prevToday=dayMin(before,todayS());
+  const best=Math.max(0,...S.sessions.map(x=>x.sec));
+  S.sessions.push({id:Date.now(),date:todayS(),type:S.type,sec});
+  save();
+  if(full)beep();
+  const after=dayMap();
+  const T=dayMin(after,todayS()),Y=dayMin(after,y);
+  const st=calcStreak(after);
+  const parts=[];
+  if(Y>0&&T>Y)parts.push('今天已经比昨天多坚持了 '+fmt(Math.round((T-Y)*10)/10)+' 分钟');
+  else if(Y>0&&T<=Y)parts.push('今天累计 '+fmt(Math.round(T*10)/10)+' 分钟，昨天是 '+fmt(Math.round(Y*10)/10)+' 分钟，再来一组就能追平');
+  else parts.push('这一组 '+fmt(mins(sec))+' 分钟，今天累计 '+fmt(Math.round(T*10)/10)+' 分钟');
+  if(prevToday<S.goal&&T>=S.goal)parts.push('今天的 '+S.goal+' 分钟目标完成了');
+  else if(sec>best&&best>0)parts.push('这是你单次最久的一次，之前最长是 '+fmt(mins(best))+' 分钟');
+  else if(st>=2)parts.push('已经连续练了 '+st+' 天');
+  const msg=(full?'时间到！':'已记录。')+parts.slice(0,2).join('；')+'。';
+  renderAll();
+  const p=$('praise');p.textContent=msg;p.classList.remove('hide');
+  p.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ---------- 今日 / 连续 ---------- */
+function calcStreak(m){
+  let d=todayS();if(!m[d])d=addDays(d,-1);
+  let n=0;while(m[d]){n++;d=addDays(d,-1)}return n;
+}
+function renderToday(){
+  const m=dayMap(),T=dayMin(m,todayS());
+  $('tMin').textContent=fmt(Math.round(T*10)/10);
+  $('goalShow').textContent=S.goal;
+  $('goal').value=S.goal;
+  const pct=Math.min(100,100*T/S.goal);
+  $('tBar').firstElementChild.style.width=pct+'%';
+  $('tBar').className='bar'+(T>=S.goal?' ok':'');
+  $('tOk').classList.toggle('hide',T<S.goal);
+  const list=S.sessions.filter(x=>x.date===todayS());
+  $('hist').innerHTML='';
+  list.forEach(x=>{
+    const li=document.createElement('li');
+    li.innerHTML='<span>'+x.type+' · '+fmt(mins(x.sec))+' 分钟</span>';
+    const b=document.createElement('button');b.textContent='删除';
+    b.onclick=()=>{if(confirm('删除这条记录？')){S.sessions=S.sessions.filter(s=>s.id!==x.id);save();renderAll()}};
+    li.appendChild(b);$('hist').appendChild(li);
+  });
+}
+$('goal').onchange=e=>{const v=parseInt(e.target.value,10);if(v>0){S.goal=v;save();renderAll()}};
+
+/* ---------- 日历 ---------- */
+let vm=new Date();vm.setDate(1);
+$('prev').onclick=()=>{vm.setMonth(vm.getMonth()-1);renderCal()};
+$('next').onclick=()=>{vm.setMonth(vm.getMonth()+1);renderCal()};
+function renderCal(){
+  const m=dayMap(),y=vm.getFullYear(),mo=vm.getMonth();
+  $('mTitle').textContent=y+' 年 '+(mo+1)+' 月';
+  let h=['一','二','三','四','五','六','日'].map(x=>'<b>'+x+'</b>').join('');
+  const first=(new Date(y,mo,1).getDay()+6)%7;
+  for(let i=0;i<first;i++)h+='<div></div>';
+  const n=new Date(y,mo+1,0).getDate();
+  let days=0;
+  for(let d=1;d<=n;d++){
+    const k=y+'-'+pad(mo+1)+'-'+pad(d),v=dayMin(m,k);
+    if(v>0)days++;
+    const c='d'+(v>=S.goal?' full':v>0?' has':'')+(k===todayS()?' today':'');
+    h+='<div class="'+c+'">'+d+(v>0?'<small>'+Math.round(v)+'分</small>':'')+'</div>';
+  }
+  $('cal').innerHTML=h;
+  const st=calcStreak(m);
+  $('streak').textContent='当前连续 '+st+' 天 · 本月练了 '+days+' 天';
+}
+
+/* ---------- 进度 ---------- */
+let view='横叉';
+$('aDate').value=todayS();
+$('vH').onclick=()=>{view='横叉';renderAngles()};
+$('vV').onclick=()=>{view='竖叉';renderAngles()};
+$('aSave').onclick=()=>{
+  const l=parseFloat($('aL').value),r=parseFloat($('aR').value),t=$('aType').value,d=$('aDate').value||todayS();
+  if(isNaN(l)||isNaN(r)){alert('左腿和右腿的数字都要填');return}
+  const prev=S.angles.filter(a=>a.type===t&&a.date<d).sort((a,b)=>a.date<b.date?-1:1).pop();
+  S.angles=S.angles.filter(a=>!(a.type===t&&a.date===d));
+  S.angles.push({date:d,type:t,left:l,right:r});save();
+  let msg=t+'已记录：左 '+l+' 厘米，右 '+r+' 厘米。';
+  if(prev){
+    const dl=Math.round((prev.left-l)*10)/10,dr=Math.round((prev.right-r)*10)/10;
+    const w=(n,s)=>n>0?s+'比上次近了 '+n+' 厘米':n<0?s+'比上次远了 '+(-n)+' 厘米':s+'和上次一样';
+    msg+=w(dl,'左腿')+'，'+w(dr,'右腿')+'。';
+  }else msg+='这是第一次测量，之后就有对比了。';
+  view=t;renderAngles();
+  const p=$('aNote');p.textContent=msg;p.classList.remove('hide');
+};
+const weekStart=s=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return ds(d)};
+function renderAngles(){
+  $('vH').className='chip'+(view==='横叉'?' on':'');$('vV').className='chip'+(view==='竖叉'?' on':'');
+  const rec=S.angles.filter(a=>a.type===view).sort((a,b)=>a.date<b.date?-1:1);
+  if(!rec.length){
+    $('pBar').firstElementChild.style.width='0';$('pTxt').textContent=view+'还没有测量记录';
+    $('chart').innerHTML='';$('wk').innerHTML='';return;
+  }
+  const f=rec[0],l=rec[rec.length-1];
+  const fa=(f.left+f.right)/2,la=(l.left+l.right)/2;
+  const pct=fa>0?Math.max(0,Math.min(100,100*(fa-la)/fa)):0;
+  $('pBar').firstElementChild.style.width=pct+'%';
+  $('pBar').className='bar'+(pct>=100?' ok':'');
+  $('pTxt').textContent='平均距离从 '+fa.toFixed(1)+' 厘米到 '+la.toFixed(1)+' 厘米，已完成 '+Math.round(pct)+'%';
+  // 按周平均
+  const w={};rec.forEach(a=>{const k=weekStart(a.date);(w[k]=w[k]||[]).push(a)});
+  const keys=Object.keys(w).sort().slice(-8);
+  const pts=keys.map(k=>({k,l:avg(w[k],'left'),r:avg(w[k],'right')}));
+  function avg(a,f){return a.reduce((s,x)=>s+x[f],0)/a.length}
+  const all=pts.flatMap(p=>[p.l,p.r]),mx=Math.max(...all)*1.1||1,mn=Math.max(0,Math.min(...all)*0.8);
+  const W=560,H=200,X=i=>pts.length===1?W/2:40+i*(W-70)/(pts.length-1),Y=v=>15+(H-45)*(v-mn)/(mx-mn||1);
+  const line=(f,c)=>'<polyline fill="none" stroke="'+c+'" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="'+pts.map((p,i)=>X(i)+','+Y(p[f])).join(' ')+'"/>'+pts.map((p,i)=>'<circle cx="'+X(i)+'" cy="'+Y(p[f])+'" r="6" fill="'+c+'"/>').join('');
+  $('chart').innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="每周平均离地距离">'+
+    '<line x1="30" x2="'+(W-10)+'" y1="'+(H-25)+'" y2="'+(H-25)+'" stroke="#f0e1e7" stroke-width="2"/>'+
+    line('l','#e58aa5')+line('r','#6fb9a0')+
+    pts.map((p,i)=>'<text x="'+X(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="14" fill="#8c7a92">'+p.k.slice(5).replace('-','/')+'</text>').join('')+
+    '<text x="34" y="14" font-size="14" fill="#e58aa5">左腿</text><text x="80" y="14" font-size="14" fill="#6fb9a0">右腿</text></svg>'+
+    '<div class="muted">横轴是每周周一的日期，曲线往下走就是进步</div>';
+  if(pts.length>=2){
+    const a=pts[pts.length-1],b=pts[pts.length-2];
+    const dl=b.l-a.l,dr=b.r-a.r,r1=n=>Math.round(Math.abs(n)*10)/10;
+    const t=(n,s)=>n>0.05?s+'近了 '+r1(n)+' 厘米':n<-0.05?s+'远了 '+r1(n)+' 厘米':s+'持平';
+    $('wk').innerHTML='<b>本周对比上周：</b>'+t(dl,'左腿')+'，'+t(dr,'右腿')+'。';
+  }else $('wk').textContent='再测一周就能看到每周变化。';
+}
+
+function renderAll(){renderChoices();renderToday();renderCal();renderAngles()}
+renderAll();
+</script>
+</body>
+</html>
